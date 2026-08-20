@@ -7,7 +7,6 @@ import { collection, addDoc } from 'firebase/firestore';
 
 export default function FeedbackModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const [showFloating, setShowFloating] = useState(false);
   const [name, setName] = useState('');
   const [feedback, setFeedback] = useState('');
   const [rating, setRating] = useState(0);
@@ -15,21 +14,13 @@ export default function FeedbackModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // Open automatically after 10 seconds only for the very first time if not dismissed/submitted
     const hasSubmitted = localStorage.getItem('venom_feedback_submitted');
     const hasDismissed = localStorage.getItem('venom_feedback_dismissed');
     
-    if (hasSubmitted) {
-      return;
-    }
-
-    setTimeout(() => {
-      setShowFloating(true);
-    }, 0);
-
-    if (!hasDismissed) {
+    if (!hasSubmitted && !hasDismissed) {
       const timer = setTimeout(() => {
         setIsOpen(true);
-        setShowFloating(false); 
       }, 10000);
       
       return () => clearTimeout(timer);
@@ -38,13 +29,11 @@ export default function FeedbackModal() {
 
   const handleCloseModal = () => {
     setIsOpen(false);
-    setShowFloating(true);
     localStorage.setItem('venom_feedback_dismissed', 'true');
   };
 
   const handleOpenModal = () => {
     setIsOpen(true);
-    setShowFloating(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,41 +53,46 @@ export default function FeedbackModal() {
 
       localStorage.setItem('venom_feedback_submitted', 'true');
       setIsOpen(false);
-      setShowFloating(false); 
     } catch (error) {
       console.error("Error saving feedback: ", error);
     } finally {
       setIsSubmitting(false);
+      setName('');
+      setFeedback('');
+      setRating(0);
     }
   };
 
   return (
     <>
+      {/* Permanent Fixed Floating Button at bottom-left corner */}
       <div 
-        className={cn(
-          "fixed bottom-8 left-8 z-100 transition-all duration-700 ease-out",
-          showFloating ? "translate-y-0 opacity-100 pointer-events-auto" : "translate-y-10 opacity-0 pointer-events-none"
-        )}
+        style={{ zIndex: 999998 }}
+        className="fixed bottom-6 left-6 pointer-events-auto"
       >
         <button 
           onClick={handleOpenModal}
-          className="group relative flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3.5 rounded-full text-white hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] overflow-hidden"
+          className="group relative flex items-center gap-3 bg-black/80 backdrop-blur-md border border-white/30 px-5 py-3 rounded-full text-white hover:bg-white hover:text-black transition-all duration-500 shadow-[0_0_25px_rgba(255,255,255,0.2)] hover:shadow-[0_0_35px_rgba(255,255,255,0.5)] overflow-hidden cursor-pointer"
         >
           <div className="absolute top-0 -left-full w-1/2 h-full bg-linear-to-r from-transparent via-white/30 to-transparent skew-x-12 transform group-hover:translate-x-[400%] transition-transform duration-1000 ease-in-out" />
           
-          <Star size={16} className="text-white group-hover:text-black transition-colors" />
+          <Star size={16} className="text-white group-hover:text-black transition-colors fill-white group-hover:fill-black" />
           <span className="text-[10px] font-bold uppercase tracking-[0.25em] pt-0.5">Rate Developer</span>
         </button>
       </div>
 
-      <div className={cn(
-        "fixed inset-0 z-150 bg-black/80 backdrop-blur-md flex items-center justify-center px-6 transition-all duration-700",
-        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-      )}>
+      {/* Full Feedback Modal */}
+      <div 
+        style={{ zIndex: 999999 }}
+        className={cn(
+          "fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center px-6 transition-all duration-700",
+          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        )}
+      >
         <div className="relative w-full max-w-lg bg-[#050505] border border-white/10 p-8 md:p-12 shadow-2xl">
           <button 
             onClick={handleCloseModal} 
-            className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors"
+            className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors cursor-pointer"
           >
             <X size={20} />
           </button>
@@ -139,7 +133,7 @@ export default function FeedbackModal() {
                     onClick={() => setRating(star)}
                     onMouseEnter={() => setHoveredRating(star)}
                     onMouseLeave={() => setHoveredRating(0)}
-                    className="transition-transform transform hover:scale-110"
+                    className="transition-transform transform hover:scale-110 cursor-pointer"
                   >
                     <Star 
                       size={28} 
@@ -156,7 +150,7 @@ export default function FeedbackModal() {
             <button 
               type="submit"
               disabled={!name.trim() || rating === 0 || isSubmitting}
-              className="w-full py-4 mt-4 bg-white text-black text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-4 mt-4 bg-white text-black text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               {isSubmitting ? 'Sending...' : 'Submit Feedback'}
             </button>
