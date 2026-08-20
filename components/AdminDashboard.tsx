@@ -1,9 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { X, Star, Users, Trash2 } from 'lucide-react';
+import { X, Star, Users, Trash2, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, orderBy, getDoc } from 'firebase/firestore';
 
 interface FeedbackItem {
   id: string;
@@ -17,6 +17,7 @@ interface FeedbackItem {
 export default function AdminDashboard() {
   const [isOpen, setIsOpen] = useState(false);
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
+  const [visitorCount, setVisitorCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const loadData = async () => {
@@ -26,13 +27,20 @@ export default function AdminDashboard() {
       const querySnapshot = await getDocs(q);
       const fetchedFeedbacks: FeedbackItem[] = [];
       
-      querySnapshot.forEach((doc) => {
-        fetchedFeedbacks.push({ id: doc.id, ...doc.data() } as FeedbackItem);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      querySnapshot.forEach((documentSnapshot: any) => {
+        fetchedFeedbacks.push({ id: documentSnapshot.id, ...documentSnapshot.data() } as FeedbackItem);
       });
       
       setFeedbacks(fetchedFeedbacks);
+
+      const statRef = doc(db, 'statistics', 'visitors');
+      const statSnap = await getDoc(statRef);
+      if (statSnap.exists()) {
+        setVisitorCount(statSnap.data().count || 0);
+      }
     } catch (error) {
-      console.error("Error fetching feedbacks: ", error);
+      console.error("Error fetching admin data: ", error);
     } finally {
       setIsLoading(false);
     }
@@ -81,10 +89,13 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className={cn(
-      "fixed inset-0 z-300 bg-black/95 backdrop-blur-xl flex flex-col p-8 transition-all duration-700 overflow-y-auto",
-      isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-    )}>
+    <div 
+      style={{ zIndex: 999999 }}
+      className={cn(
+        "fixed inset-0 bg-black/95 backdrop-blur-xl flex flex-col p-8 transition-all duration-700 overflow-y-auto",
+        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      )}
+    >
       <div className="max-w-7xl w-full mx-auto">
         
         <div className="flex items-center justify-between border-b border-white/10 pb-6 mb-10">
@@ -100,7 +111,15 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="bg-[#0a0a0a] border border-white/5 p-8 flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-[10px] font-bold tracking-[0.2em] uppercase mb-2">Total Visitors</p>
+              <h3 className="text-4xl font-black text-white">{visitorCount}</h3>
+            </div>
+            <Eye size={32} className="text-white/20" />
+          </div>
+
           <div className="bg-[#0a0a0a] border border-white/5 p-8 flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-[10px] font-bold tracking-[0.2em] uppercase mb-2">Total Feedbacks</p>

@@ -14,6 +14,8 @@ import FeedbackModal from '@/components/FeedbackModal';
 import AdminDashboard from '@/components/AdminDashboard';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
 
 const carouselSlides = [
   { src: "/brand/1.png", alt: "Venom Tribal Tee", title: "Core Collection" },
@@ -28,6 +30,26 @@ export default function Home() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    // Visitor Tracking Logic
+    const trackVisitor = async () => {
+      const hasVisited = localStorage.getItem('venom_has_visited');
+      if (!hasVisited) {
+        localStorage.setItem('venom_has_visited', 'true');
+        const statRef = doc(db, 'statistics', 'visitors');
+        try {
+          const docSnap = await getDoc(statRef);
+          if (docSnap.exists()) {
+            await updateDoc(statRef, { count: increment(1) });
+          } else {
+            await setDoc(statRef, { count: 1 });
+          }
+        } catch (error) {
+          console.error("Error tracking visitor: ", error);
+        }
+      }
+    };
+    trackVisitor();
+
     gsap.registerPlugin(ScrollTrigger);
     
     const ctx = gsap.context(() => {
