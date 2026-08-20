@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { db } from '@/lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 export default function FeedbackModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,6 +12,7 @@ export default function FeedbackModal() {
   const [feedback, setFeedback] = useState('');
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const hasSubmitted = localStorage.getItem('venom_feedback_submitted');
@@ -41,24 +44,29 @@ export default function FeedbackModal() {
     setShowFloating(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || rating === 0) return;
+    if (!name.trim() || rating === 0 || isSubmitting) return;
 
-    const newFeedback = {
-      id: Date.now().toString(),
-      name,
-      feedback,
-      rating,
-      date: new Date().toLocaleDateString()
-    };
+    setIsSubmitting(true);
 
-    const existingFeedbacks = JSON.parse(localStorage.getItem('venom_feedbacks') || '[]');
-    localStorage.setItem('venom_feedbacks', JSON.stringify([...existingFeedbacks, newFeedback]));
-    localStorage.setItem('venom_feedback_submitted', 'true');
-    
-    setIsOpen(false);
-    setShowFloating(false);
+    try {
+      await addDoc(collection(db, 'feedbacks'), {
+        name,
+        feedback,
+        rating,
+        date: new Date().toLocaleDateString(),
+        timestamp: Date.now()
+      });
+
+      localStorage.setItem('venom_feedback_submitted', 'true');
+      setIsOpen(false);
+      setShowFloating(false);
+    } catch (error) {
+      console.error("Error saving feedback: ", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -144,10 +152,10 @@ export default function FeedbackModal() {
 
             <button 
               type="submit"
-              disabled={!name.trim() || rating === 0}
-              className="w-full py-4 mt-4 bg-white text-black text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!name.trim() || rating === 0 || isSubmitting}
+              className="w-full py-4 mt-4 bg-white text-black text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Submit Feedback
+              {isSubmitting ? 'Sending...' : 'Submit Feedback'}
             </button>
           </form>
         </div>

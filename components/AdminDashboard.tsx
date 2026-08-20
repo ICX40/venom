@@ -1,25 +1,41 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { X, Star, Users } from 'lucide-react';
+import { X, Star, Users, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 
-// Define the exact shape of the feedback to resolve the 'any' type error
 interface FeedbackItem {
   id: string;
   name: string;
   feedback: string;
   rating: number;
   date: string;
+  timestamp: number;
 }
 
 export default function AdminDashboard() {
   const [isOpen, setIsOpen] = useState(false);
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Moved loadData above useEffect to fix the "accessed before it is declared" error
-  const loadData = () => {
-    const storedFeedbacks = JSON.parse(localStorage.getItem('venom_feedbacks') || '[]');
-    setFeedbacks(storedFeedbacks);
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const q = query(collection(db, 'feedbacks'), orderBy('timestamp', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const fetchedFeedbacks: FeedbackItem[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        fetchedFeedbacks.push({ id: doc.id, ...doc.data() } as FeedbackItem);
+      });
+      
+      setFeedbacks(fetchedFeedbacks);
+    } catch (error) {
+      console.error("Error fetching feedbacks: ", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -53,11 +69,14 @@ export default function AdminDashboard() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  const clearData = () => {
-    if (confirm("Are you sure you want to clear all feedback data?")) {
-      localStorage.removeItem('venom_feedbacks');
-      localStorage.removeItem('venom_feedback_submitted');
-      setFeedbacks([]);
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to delete this feedback?")) {
+      try {
+        await deleteDoc(doc(db, 'feedbacks', id));
+        setFeedbacks(prev => prev.filter(fb => fb.id !== id));
+      } catch (error) {
+        console.error("Error deleting document: ", error);
+      }
     }
   };
 
@@ -81,7 +100,7 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           <div className="bg-[#0a0a0a] border border-white/5 p-8 flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-[10px] font-bold tracking-[0.2em] uppercase mb-2">Total Feedbacks</p>
@@ -101,34 +120,34 @@ export default function AdminDashboard() {
             </div>
             <Star size={32} className="text-white/20" />
           </div>
-          
-          <div className="flex items-center justify-end">
-             <button 
-                onClick={clearData}
-                className="py-4 px-8 border border-red-900 text-red-500 text-xs font-bold uppercase tracking-[0.2em] hover:bg-red-950 hover:text-red-400 transition-colors"
-             >
-                Purge Database
-             </button>
-          </div>
         </div>
 
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white mb-6 border-l-2 border-white pl-4">
+          <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white mb-6 border-l-2 border-white pl-4 flex items-center gap-4">
             Recent Submissions
+            {isLoading && <span className="text-[10px] text-gray-500 animate-pulse">Syncing Database...</span>}
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {feedbacks.length === 0 ? (
+            {!isLoading && feedbacks.length === 0 ? (
               <p className="text-gray-600 text-xs tracking-widest uppercase col-span-full">No incoming signals.</p>
             ) : (
-              feedbacks.slice().reverse().map((fb) => (
-                <div key={fb.id} className="bg-[#0a0a0a] border border-white/10 p-6 flex flex-col justify-between">
+              feedbacks.map((fb) => (
+                <div key={fb.id} className="group bg-[#0a0a0a] border border-white/10 p-6 flex flex-col justify-between relative hover:border-white/30 transition-colors">
+                  
+                  <button 
+                    onClick={() => handleDelete(fb.id)}
+                    className="absolute top-4 right-4 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                    aria-label="Delete Feedback"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+
                   <div>
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start mb-4 pr-6">
                       <h4 className="text-white text-sm font-bold uppercase tracking-widest">{fb.name}</h4>
                       <span className="text-gray-600 text-[10px] tracking-widest">{fb.date}</span>
                     </div>
-                    {/* Fixed unescaped entities error using &quot; */}
                     <p className="text-gray-400 text-xs tracking-wider leading-relaxed uppercase mb-6">
                       &quot;{fb.feedback}&quot;
                     </p>
