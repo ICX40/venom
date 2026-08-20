@@ -9,6 +9,9 @@ import { ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PRODUCTS } from '@/data/products';
+import { useCart } from '@/context/CartContext';
+import FeedbackModal from '@/components/FeedbackModal';
+import AdminDashboard from '@/components/AdminDashboard';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -20,6 +23,8 @@ const carouselSlides = [
 ];
 
 export default function Home() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { addToCart } = useCart();
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -180,6 +185,10 @@ export default function Home() {
 
         <Footer /> 
       </div>
+
+      {/* Secret Admin & Feedback Features */}
+      <FeedbackModal />
+      <AdminDashboard />
     </main>
   );
 }
