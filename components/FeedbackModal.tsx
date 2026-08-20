@@ -18,15 +18,18 @@ export default function FeedbackModal() {
     const hasSubmitted = localStorage.getItem('venom_feedback_submitted');
     const hasDismissed = localStorage.getItem('venom_feedback_dismissed');
     
-    if (hasSubmitted) return;
+    if (hasSubmitted) {
+      return;
+    }
 
-    if (hasDismissed) {
-      setTimeout(() => {
-        setShowFloating(true);
-      }, 0);
-    } else {
+    setTimeout(() => {
+      setShowFloating(true);
+    }, 0);
+
+    if (!hasDismissed) {
       const timer = setTimeout(() => {
         setIsOpen(true);
+        setShowFloating(false); 
       }, 10000);
       
       return () => clearTimeout(timer);
@@ -61,7 +64,7 @@ export default function FeedbackModal() {
 
       localStorage.setItem('venom_feedback_submitted', 'true');
       setIsOpen(false);
-      setShowFloating(false);
+      setShowFloating(false); 
     } catch (error) {
       console.error("Error saving feedback: ", error);
     } finally {
@@ -74,7 +77,7 @@ export default function FeedbackModal() {
       <div 
         className={cn(
           "fixed bottom-8 left-8 z-100 transition-all duration-700 ease-out",
-          showFloating && !isOpen ? "translate-y-0 opacity-100 pointer-events-auto" : "translate-y-10 opacity-0 pointer-events-none"
+          showFloating ? "translate-y-0 opacity-100 pointer-events-auto" : "translate-y-10 opacity-0 pointer-events-none"
         )}
       >
         <button 
