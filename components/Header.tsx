@@ -8,7 +8,11 @@ import { useCart } from '@/context/CartContext';
 import SearchModal from './SearchModal';
 import AuthModal from './AuthModal';
 
-export default function Header() {
+interface HeaderProps {
+  isLoaded?: boolean;
+}
+
+export default function Header({ isLoaded = false }: HeaderProps) {
   const [showLogo, setShowLogo] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -32,7 +36,10 @@ export default function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 w-full z-50 bg-transparent transition-all duration-500 pointer-events-none">
+      <header className={cn(
+        "fixed top-0 left-0 w-full z-50 bg-transparent transition-all duration-1000 pointer-events-none",
+        isLoaded ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
+      )}>
         <div className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between relative pointer-events-auto">
           
           <nav className="hidden md:flex flex-1 gap-10 items-center justify-start">
